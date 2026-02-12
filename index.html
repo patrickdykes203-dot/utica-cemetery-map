@@ -32,7 +32,14 @@
         }
     ).addTo(map);
 
-    const marker = L.marker(graveLocation).addTo(map);
+    const marker = L.circleMarker(graveLocation, {
+    radius: 6,
+    fillColor: "#ffffff",
+    color: "#000000",
+    weight: 1,
+    opacity: 1,
+    fillOpacity: 0.9
+}).addTo(map);
 
     marker.bindPopup(`
         <div class="popup-content">
