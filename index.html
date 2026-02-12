@@ -22,7 +22,9 @@
 
     const graveLocation = [39.736500, -93.636222];
 
-    const map = L.map('map').setView(graveLocation, 19);
+    const map = L.map('map', {
+    maxZoom: 22
+}).setView(graveLocation, 20);
 
     // Esri World Imagery (Satellite) - Free for light use, no API key required
     L.tileLayer(
