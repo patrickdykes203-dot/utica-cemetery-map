@@ -13,6 +13,6 @@ const graves = [
     death: "Dec 1, 1868",
     lat: 39.73650,
     lng: 93.63616,
-  details: "Wife of Rev. Jacob Miller"
+    details: "Wife of Rev. Jacob Miller"
   }
 ];
