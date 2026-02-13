@@ -46,19 +46,20 @@
 <!-- Load grave data -->
 <script src="graves.js"></script>
 
+<!-- Leaflet library -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-    // Default center (Catherine Hall location)
+    // Default fallback center (Catherine Hall location)
     const defaultCenter = [39.736500, -93.636222];
 
     const map = L.map('map', {
         maxZoom: 19,
         minZoom: 16
-    }).setView(defaultCenter, 19);
+    }).setView(defaultCenter, 18);
 
-    // Esri Satellite Imagery (free, no key)
+    // Esri Satellite Imagery (free, no API key)
     L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
         {
@@ -67,8 +68,12 @@
         }
     ).addTo(map);
 
+    const bounds = [];
+
     // Loop through graves from graves.js
     graves.forEach(function(grave) {
+
+        bounds.push([grave.lat, grave.lng]);
 
         const marker = L.circleMarker([grave.lat, grave.lng], {
             radius: 6,
@@ -99,6 +104,11 @@
         });
 
     });
+
+    // Auto-fit map to show all graves
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    }
 
 </script>
 
