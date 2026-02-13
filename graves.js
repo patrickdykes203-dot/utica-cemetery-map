@@ -13,6 +13,6 @@ const graves = [
     death: "January 1, 1868",
     lat: 39.736510,
     lng: -93.636150,
-    details: "Aged 67 years, 9 months, 4 days"
+    details: "Aged 67 years, 9 months, 4 days Wife of Rev Jacob Miller"
   }
 ];
