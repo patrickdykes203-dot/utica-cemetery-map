@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Utica Cemetery - Private Archive Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <style>
+        body { margin: 0; font-family: Georgia, serif; background-color: #111; }
+        #map { height: 100vh; width: 100%; }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+
+        .archive-popup {
+            font-family: Georgia, serif;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .archive-popup h3 {
+            margin: 0 0 4px 0;
+            font-weight: bold;
+        }
+
+        .archive-popup hr {
+            margin: 6px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+
+    const graveLocation = [39.736500, -93.636222];
+
+    const map = L.map('map', {
+        maxZoom: 19,
+        minZoom: 16
+    }).setView(graveLocation, 19);
+
+    // Esri Satellite Imagery (no API key required)
+    L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+        {
+            attribution: 'Tiles © Esri',
+            maxZoom: 19
+        }
+    ).addTo(map);
+
+    // Subtle archival-style grave marker
+    const marker = L.circleMarker(graveLocation, {
+        radius: 6,
+        fillColor: "#ffffff",
+        color: "#000000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.95
+    }).addTo(map);
+
+    marker.bindPopup(`
+        <div class="archive-popup">
+            <h3>Catherine Hall</h3>
+            <hr>
+            <strong>Born:</strong> Oct 14, 1849<br>
+            <strong>Died:</strong> Mar 3, 1871<br><br>
+            <em>Wife of J. W. Hall</em><br>
+            <span style="font-size:13px;">Mother — Gone but not forgotten</span>
+        </div>
+    `);
+
+    // Gentle hover effect (desktop)
+    marker.on('mouseover', function() {
+        this.setStyle({ radius: 8 });
+    });
+
+    marker.on('mouseout', function() {
+        this.setStyle({ radius: 6 });
+    });
+
+</script>
+
+</body>
+</html>
