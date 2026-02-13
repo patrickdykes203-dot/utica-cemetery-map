@@ -7,6 +7,7 @@ const graves = [
     lng: -93.636222,
     details: "Wife of J. W. Hall — Mother, Gone but not forgotten"
   },
+  
   {
     name: "Delila Miller",
     birth: "1801",
