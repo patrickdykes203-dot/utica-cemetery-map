@@ -11,8 +11,8 @@ const graves = [
     name: "Delila Miller",
     birth: "1801",
     death: "Dec 1, 1868",
-    lat: 39.73650,
-    lng: -93.63616,
+    lat: 39.736500,
+    lng: -93.636160,
     details: "Wife of Rev. Jacob Miller"
   }
 ];
