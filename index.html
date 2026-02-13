@@ -7,6 +7,10 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
+    <!-- Marker Cluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+
     <style>
         body { 
             margin: 0; 
@@ -46,12 +50,14 @@
 <!-- Load grave data -->
 <script src="graves.js"></script>
 
-<!-- Leaflet library -->
+<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Marker Cluster -->
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
 
-    // Default fallback center (Catherine Hall location)
     const defaultCenter = [39.736500, -93.636222];
 
     const map = L.map('map', {
@@ -59,7 +65,7 @@
         minZoom: 16
     }).setView(defaultCenter, 18);
 
-    // Esri Satellite Imagery (free, no API key)
+    // Satellite imagery
     L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
         {
@@ -70,19 +76,28 @@
 
     const bounds = [];
 
-    // Loop through graves from graves.js
+    // Marker cluster group with spiderfy
+    const markers = L.markerClusterGroup({
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: false,
+        disableClusteringAtZoom: 19
+    });
+
+    map.addLayer(markers);
+
     graves.forEach(function(grave) {
 
         bounds.push([grave.lat, grave.lng]);
 
         const marker = L.circleMarker([grave.lat, grave.lng], {
-            radius: 6,
+            radius: 4,
             fillColor: "#ffffff",
             color: "#000000",
             weight: 1,
             opacity: 1,
             fillOpacity: 0.95
-        }).addTo(map);
+        });
 
         marker.bindPopup(`
             <div class="archive-popup">
@@ -94,14 +109,7 @@
             </div>
         `);
 
-        // Subtle hover grow effect (desktop)
-        marker.on('mouseover', function() {
-            this.setStyle({ radius: 8 });
-        });
-
-        marker.on('mouseout', function() {
-            this.setStyle({ radius: 6 });
-        });
+        markers.addLayer(marker);
 
     });
 
