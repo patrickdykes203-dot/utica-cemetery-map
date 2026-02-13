@@ -7,10 +7,6 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-    <!-- Marker Cluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
-
     <style>
         body { 
             margin: 0; 
@@ -23,23 +19,23 @@
             width: 100%; 
         }
 
-        .leaflet-popup-content-wrapper {
-            border-radius: 8px;
-        }
-
         .archive-popup {
             font-family: Georgia, serif;
             font-size: 15px;
             line-height: 1.4;
         }
 
-        .archive-popup h3 {
-            margin: 0 0 4px 0;
-            font-weight: bold;
+        .person-card {
+            margin-bottom: 12px;
         }
 
-        .archive-popup hr {
-            margin: 6px 0;
+        .person-card h3 {
+            margin: 0 0 4px 0;
+        }
+
+        .person-divider {
+            border-top: 1px solid #ccc;
+            margin: 8px 0;
         }
     </style>
 </head>
@@ -47,14 +43,8 @@
 
 <div id="map"></div>
 
-<!-- Load grave data -->
 <script src="graves.js"></script>
-
-<!-- Leaflet -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<!-- Marker Cluster -->
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
 
@@ -65,7 +55,6 @@
         minZoom: 16
     }).setView(defaultCenter, 18);
 
-    // Satellite imagery
     L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
         {
@@ -76,44 +65,45 @@
 
     const bounds = [];
 
-    // Marker cluster group with spiderfy
-    const markers = L.markerClusterGroup({
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: false,
-        disableClusteringAtZoom: 19
-    });
+    graves.forEach(function(stone) {
 
-    map.addLayer(markers);
+        bounds.push([stone.lat, stone.lng]);
 
-    graves.forEach(function(grave) {
-
-        bounds.push([grave.lat, grave.lng]);
-
-        const marker = L.circleMarker([grave.lat, grave.lng], {
+        const marker = L.circleMarker([stone.lat, stone.lng], {
             radius: 4,
             fillColor: "#ffffff",
             color: "#000000",
             weight: 1,
             opacity: 1,
             fillOpacity: 0.95
+        }).addTo(map);
+
+        // Build popup content for multiple people
+        let popupContent = `<div class="archive-popup">`;
+
+        stone.people.forEach(function(person, index) {
+
+            popupContent += `
+                <div class="person-card">
+                    <h3>${person.name}</h3>
+                    <strong>Born:</strong> ${person.birth}<br>
+                    <strong>Died:</strong> ${person.death}<br><br>
+                    ${person.details}
+                </div>
+            `;
+
+            if (index < stone.people.length - 1) {
+                popupContent += `<div class="person-divider"></div>`;
+            }
+
         });
 
-        marker.bindPopup(`
-            <div class="archive-popup">
-                <h3>${grave.name}</h3>
-                <hr>
-                <strong>Born:</strong> ${grave.birth}<br>
-                <strong>Died:</strong> ${grave.death}<br><br>
-                ${grave.details}
-            </div>
-        `);
+        popupContent += `</div>`;
 
-        markers.addLayer(marker);
+        marker.bindPopup(popupContent);
 
     });
 
-    // Auto-fit map to show all graves
     if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [50, 50] });
     }
