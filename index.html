@@ -1,39 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Utica Cemetery - Private Archive Map</title>
+    <title>Utica Cemetery Archive</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
     <style>
-        body { 
-            margin: 0; 
-            font-family: Georgia, serif; 
-            background-color: #111; 
-        }
-
-        #map { 
-            height: 100vh; 
-            width: 100%; 
-        }
+        body { margin: 0; font-family: Georgia, serif; background: #111; }
+        #map { height: 100vh; width: 100%; }
 
         .archive-popup {
-            font-family: Georgia, serif;
             font-size: 15px;
             line-height: 1.4;
         }
 
         .person-card {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
-        .person-card h3 {
-            margin: 0 0 4px 0;
-        }
-
-        .person-divider {
+        .divider {
             border-top: 1px solid #ccc;
             margin: 8px 0;
         }
@@ -43,29 +30,70 @@
 
 <div id="map"></div>
 
-<script src="graves.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-    const defaultCenter = [39.736500, -93.636222];
+const map = L.map('map', {
+    maxZoom: 19,
+    minZoom: 16
+}).setView([39.736500, -93.636222], 18);
 
-    const map = L.map('map', {
-        maxZoom: 19,
-        minZoom: 16
-    }).setView(defaultCenter, 18);
+L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { attribution: 'Tiles © Esri', maxZoom: 19 }
+).addTo(map);
 
-    L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
-        {
-            attribution: 'Tiles © Esri',
-            maxZoom: 19
+fetch('cemetery.csv')
+  .then(response => response.text())
+  .then(csvText => {
+
+    const rows = csvText.split('\n').slice(1); // remove header
+
+    const stones = {};
+
+    rows.forEach(row => {
+        if (!row.trim()) return;
+
+        const cols = row.split(',');
+
+        const [
+            StoneID,
+            Latitude,
+            Longitude,
+            LastName,
+            FirstName,
+            BirthDate,
+            DeathDate,
+            AgeText,
+            Inscription,
+            PhotoURL,
+            FindAGraveURL,
+            Section,
+            Notes
+        ] = cols;
+
+        if (!stones[StoneID]) {
+            stones[StoneID] = {
+                lat: parseFloat(Latitude),
+                lng: parseFloat(Longitude),
+                people: []
+            };
         }
-    ).addTo(map);
+
+        stones[StoneID].people.push({
+            name: FirstName + " " + LastName,
+            birth: BirthDate,
+            death: DeathDate,
+            age: AgeText,
+            inscription: Inscription
+        });
+
+    });
 
     const bounds = [];
 
-    graves.forEach(function(stone) {
+    Object.values(stones).forEach(stone => {
 
         bounds.push([stone.lat, stone.lng]);
 
@@ -78,35 +106,37 @@
             fillOpacity: 0.95
         }).addTo(map);
 
-        // Build popup content for multiple people
-        let popupContent = `<div class="archive-popup">`;
+        let popup = `<div class="archive-popup">`;
 
-        stone.people.forEach(function(person, index) {
+        stone.people.forEach((person, index) => {
 
-            popupContent += `
+            popup += `
                 <div class="person-card">
-                    <h3>${person.name}</h3>
-                    <strong>Born:</strong> ${person.birth}<br>
-                    <strong>Died:</strong> ${person.death}<br><br>
-                    ${person.details}
+                    <strong>${person.name}</strong><br>
+                    Born: ${person.birth || "Unknown"}<br>
+                    Died: ${person.death || "Unknown"}<br>
+                    ${person.age ? "Age: " + person.age + "<br>" : ""}
+                    ${person.inscription || ""}
                 </div>
             `;
 
             if (index < stone.people.length - 1) {
-                popupContent += `<div class="person-divider"></div>`;
+                popup += `<div class="divider"></div>`;
             }
 
         });
 
-        popupContent += `</div>`;
+        popup += `</div>`;
 
-        marker.bindPopup(popupContent);
+        marker.bindPopup(popup);
 
     });
 
     if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [50, 50] });
     }
+
+  });
 
 </script>
 
