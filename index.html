@@ -24,6 +24,12 @@
             border-top: 1px solid #ccc;
             margin: 8px 0;
         }
+
+        .stone-photo {
+            width: 100%;
+            margin-top: 8px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -48,36 +54,41 @@ fetch('cemetery.csv')
   .then(response => response.text())
   .then(csvText => {
 
-    const rows = csvText.split('\n').slice(1); // remove header
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',');
+
+    const getIndex = (name) => headers.indexOf(name);
 
     const stones = {};
 
-    rows.forEach(row => {
-        if (!row.trim()) return;
+    for (let i = 1; i < lines.length; i++) {
 
-        const cols = row.split(',');
+        if (!lines[i].trim()) continue;
 
-        const [
-            StoneID,
-            Latitude,
-            Longitude,
-            LastName,
-            FirstName,
-            BirthDate,
-            DeathDate,
-            AgeText,
-            Inscription,
-            PhotoURL,
-            FindAGraveURL,
-            Section,
-            Notes
-        ] = cols;
+        const cols = lines[i].split(',');
+
+        const StoneID = cols[getIndex("StoneID")];
+        const Latitude = parseFloat(cols[getIndex("Latitude")]);
+        const Longitude = parseFloat(cols[getIndex("Longitude")]);
+        const LastName = cols[getIndex("LastName")] || "";
+        const FirstName = cols[getIndex("FirstName")] || "";
+        const BirthDate = cols[getIndex("BirthDate")] || "";
+        const DeathDate = cols[getIndex("DeathDate")] || "";
+        const AgeText = cols[getIndex("AgeText")] || "";
+        const Inscription = cols[getIndex("Inscription")] || "";
+        const Section = cols[getIndex("Section")] || "";
+        const Notes = cols[getIndex("Notes")] || "";
+        const PhotoFileName = cols[getIndex("PhotoFileName")] || "";
+        const FindAGraveURL = cols[getIndex("FindAGraveURL")] || "";
+
+        if (!StoneID || isNaN(Latitude) || isNaN(Longitude)) continue;
 
         if (!stones[StoneID]) {
             stones[StoneID] = {
-                lat: parseFloat(Latitude),
-                lng: parseFloat(Longitude),
-                people: []
+                lat: Latitude,
+                lng: Longitude,
+                people: [],
+                photo: PhotoFileName
             };
         }
 
@@ -86,10 +97,13 @@ fetch('cemetery.csv')
             birth: BirthDate,
             death: DeathDate,
             age: AgeText,
-            inscription: Inscription
+            inscription: Inscription,
+            section: Section,
+            notes: Notes,
+            findagrave: FindAGraveURL
         });
 
-    });
+    }
 
     const bounds = [];
 
@@ -113,10 +127,12 @@ fetch('cemetery.csv')
             popup += `
                 <div class="person-card">
                     <strong>${person.name}</strong><br>
-                    Born: ${person.birth || "Unknown"}<br>
-                    Died: ${person.death || "Unknown"}<br>
+                    ${person.birth ? "Born: " + person.birth + "<br>" : ""}
+                    ${person.death ? "Died: " + person.death + "<br>" : ""}
                     ${person.age ? "Age: " + person.age + "<br>" : ""}
-                    ${person.inscription || ""}
+                    ${person.inscription ? person.inscription + "<br>" : ""}
+                    ${person.notes ? person.notes + "<br>" : ""}
+                    ${person.findagrave ? `<a href="${person.findagrave}" target="_blank">Find A Grave</a>` : ""}
                 </div>
             `;
 
@@ -125,6 +141,11 @@ fetch('cemetery.csv')
             }
 
         });
+
+        if (stone.photo) {
+            popup += `<img src="photos/${stone.photo}" class="stone-photo"
+                      onerror="this.style.display='none'">`;
+        }
 
         popup += `</div>`;
 
