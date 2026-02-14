@@ -50,7 +50,7 @@ L.tileLayer(
     { attribution: 'Tiles © Esri', maxZoom: 19 }
 ).addTo(map);
 
-fetch('cemetery.csv')
+fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2pk76rkVZ78f8woDAo2pHGo0bzZcgoPyQHQc2mo72_hTxDHihkW3KoS/pub?output=csv')
   .then(response => response.text())
   .then(csvText => {
 
