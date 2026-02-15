@@ -11,28 +11,28 @@
         body { margin: 0; font-family: Georgia, serif; background: #111; }
         #map { height: 100vh; width: 100%; }
 
-        .archive-popup {
-            font-size: 15px;
-            line-height: 1.4;
-        }
-
-        .person-card {
-            margin-bottom: 10px;
-        }
-
-        .divider {
-            border-top: 1px solid #ccc;
-            margin: 8px 0;
-        }
-
-        .stone-photo {
-            width: 100%;
-            margin-top: 8px;
+        #searchBox {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 8px;
+            width: 250px;
+            font-size: 16px;
             border-radius: 4px;
+            border: none;
         }
+
+        .archive-popup { font-size: 15px; line-height: 1.4; }
+        .person-card { margin-bottom: 10px; }
+        .divider { border-top: 1px solid #ccc; margin: 8px 0; }
+        .stone-photo { width: 100%; margin-top: 8px; border-radius: 4px; }
     </style>
 </head>
 <body>
+
+<input type="text" id="searchBox" placeholder="Search name...">
 
 <div id="map"></div>
 
@@ -50,13 +50,14 @@ L.tileLayer(
     { attribution: 'Tiles © Esri', maxZoom: 19 }
 ).addTo(map);
 
+let markerIndex = [];
+
 fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2pk76rkVZ78f8woDAo2pHGo0bzZcgoPyQHQc2mo72_hTxDHihkW3KoS/pub?output=csv')
   .then(response => response.text())
   .then(csvText => {
 
     const lines = csvText.trim().split('\n');
     const headers = lines[0].split(',');
-
     const getIndex = (name) => headers.indexOf(name);
 
     const stones = {};
@@ -76,7 +77,6 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
         const DeathDate = cols[getIndex("DeathDate")] || "";
         const AgeText = cols[getIndex("AgeText")] || "";
         const Inscription = cols[getIndex("Inscription")] || "";
-        const Section = cols[getIndex("Section")] || "";
         const Notes = cols[getIndex("Notes")] || "";
         const PhotoFileName = cols[getIndex("PhotoFileName")] || "";
         const FindAGraveURL = cols[getIndex("FindAGraveURL")] || "";
@@ -93,23 +93,17 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
         }
 
         stones[StoneID].people.push({
-            name: FirstName + " " + LastName,
+            name: (FirstName + " " + LastName).trim(),
             birth: BirthDate,
             death: DeathDate,
             age: AgeText,
             inscription: Inscription,
-            section: Section,
             notes: Notes,
             findagrave: FindAGraveURL
         });
-
     }
 
-    const bounds = [];
-
     Object.values(stones).forEach(stone => {
-
-        bounds.push([stone.lat, stone.lng]);
 
         const marker = L.circleMarker([stone.lat, stone.lng], {
             radius: 4,
@@ -139,7 +133,6 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
             if (index < stone.people.length - 1) {
                 popup += `<div class="divider"></div>`;
             }
-
         });
 
         if (stone.photo) {
@@ -151,11 +144,30 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
 
         marker.bindPopup(popup);
 
+        stone.people.forEach(person => {
+            markerIndex.push({
+                name: person.name.toLowerCase(),
+                marker: marker
+            });
+        });
+
     });
 
-    if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] });
-    }
+    document.getElementById("searchBox").addEventListener("keyup", function(e) {
+
+        const query = e.target.value.toLowerCase();
+
+        if (!query) return;
+
+        const result = markerIndex.find(entry =>
+            entry.name.includes(query)
+        );
+
+        if (result) {
+            map.setView(result.marker.getLatLng(), 19);
+            result.marker.openPopup();
+        }
+    });
 
   });
 
