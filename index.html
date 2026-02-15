@@ -27,14 +27,63 @@
         .archive-popup { font-size: 15px; line-height: 1.4; }
         .person-card { margin-bottom: 10px; }
         .divider { border-top: 1px solid #ccc; margin: 8px 0; }
-        .stone-photo { width: 100%; margin-top: 8px; border-radius: 4px; }
+        .stone-photo { width: 100%; margin-top: 8px; border-radius: 4px; cursor: pointer; }
+
+        /* FULLSCREEN OVERLAY */
+        #photoOverlay {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.92);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #photoContent {
+            position: relative;
+            max-width: 95%;
+            max-height: 95%;
+            text-align: center;
+            color: white;
+        }
+
+        #overlayImage {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 6px;
+        }
+
+        #overlayCaption {
+            margin-top: 12px;
+            font-size: 18px;
+        }
+
+        #closeOverlay {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 32px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
 <input type="text" id="searchBox" placeholder="Search name...">
-
 <div id="map"></div>
+
+<!-- FULLSCREEN PHOTO OVERLAY -->
+<div id="photoOverlay">
+  <div id="photoContent">
+    <span id="closeOverlay">&times;</span>
+    <img id="overlayImage" src="">
+    <div id="overlayCaption"></div>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
@@ -51,6 +100,23 @@ L.tileLayer(
 ).addTo(map);
 
 let markerIndex = [];
+let allMarkers = [];
+
+function openPhoto(src, captionText) {
+    document.getElementById("overlayImage").src = src;
+    document.getElementById("overlayCaption").innerHTML = captionText;
+    document.getElementById("photoOverlay").style.display = "flex";
+}
+
+document.getElementById("closeOverlay").onclick = function() {
+    document.getElementById("photoOverlay").style.display = "none";
+};
+
+document.getElementById("photoOverlay").onclick = function(e) {
+    if (e.target.id === "photoOverlay") {
+        document.getElementById("photoOverlay").style.display = "none";
+    }
+};
 
 fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2pk76rkVZ78f8woDAo2pHGo0bzZcgoPyQHQc2mo72_hTxDHihkW3KoS/pub?output=csv')
   .then(response => response.text())
@@ -114,6 +180,8 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
             fillOpacity: 0.95
         }).addTo(map);
 
+        allMarkers.push(marker);
+
         let popup = `<div class="archive-popup">`;
 
         stone.people.forEach((person, index) => {
@@ -136,8 +204,21 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
         });
 
         if (stone.photo) {
-            popup += `<img src="photos/${stone.photo}" class="stone-photo"
-                      onerror="this.style.display='none'">`;
+
+            const captionText = stone.people.map(p =>
+                `<strong>${p.name}</strong><br>
+                 ${p.birth ? p.birth + " – " : ""}
+                 ${p.death ? p.death : ""}`
+            ).join("<br><br>");
+
+            popup += `
+                <img src="photos/${stone.photo}" class="stone-photo"
+                onclick="openPhoto('photos/${stone.photo}', \`${captionText}\`)"
+                onerror="this.style.display='none'">
+                <div style="text-align:center; font-size:14px; margin-top:4px;">
+                    Tap image to enlarge
+                </div>
+            `;
         }
 
         popup += `</div>`;
@@ -157,13 +238,19 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
 
         const query = e.target.value.toLowerCase();
 
-        if (!query) return;
+        if (!query) {
+            allMarkers.forEach(m => map.addLayer(m));
+            return;
+        }
+
+        allMarkers.forEach(m => map.removeLayer(m));
 
         const result = markerIndex.find(entry =>
             entry.name.includes(query)
         );
 
         if (result) {
+            map.addLayer(result.marker);
             map.setView(result.marker.getLatLng(), 19);
             result.marker.openPopup();
         }
