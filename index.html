@@ -11,17 +11,48 @@
         body { margin: 0; font-family: Georgia, serif; background: #111; }
         #map { height: 100vh; width: 100%; }
 
-        #searchBox {
+        /* SEARCH PANEL */
+        #searchPanel {
             position: absolute;
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            padding: 8px;
-            width: 250px;
-            font-size: 16px;
+            background: rgba(20,20,20,0.95);
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        #searchPanel input {
+            padding: 6px;
+            font-size: 14px;
             border-radius: 4px;
             border: none;
+            width: 120px;
+        }
+
+        #searchPanel button {
+            padding: 6px 10px;
+            font-size: 14px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+
+        #noResults {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(120,0,0,0.95);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 4px;
+            display: none;
+            z-index: 1000;
         }
 
         .archive-popup { font-size: 15px; line-height: 1.4; }
@@ -73,10 +104,19 @@
 </head>
 <body>
 
-<input type="text" id="searchBox" placeholder="Search name...">
+<div id="searchPanel">
+    <input type="text" id="firstNameSearch" placeholder="First Name">
+    <input type="text" id="lastNameSearch" placeholder="Last Name">
+    <input type="text" id="birthSearch" placeholder="Birth Year">
+    <input type="text" id="deathSearch" placeholder="Death Year">
+    <button id="searchBtn">Search</button>
+    <button id="clearBtn">Clear</button>
+</div>
+
+<div id="noResults">No results found</div>
+
 <div id="map"></div>
 
-<!-- FULLSCREEN PHOTO OVERLAY -->
 <div id="photoOverlay">
   <div id="photoContent">
     <span id="closeOverlay">&times;</span>
@@ -102,6 +142,7 @@ L.tileLayer(
 let markerIndex = [];
 let allMarkers = [];
 
+/* FULLSCREEN IMAGE */
 function openPhoto(src, captionText) {
     document.getElementById("overlayImage").src = src;
     document.getElementById("overlayCaption").innerHTML = captionText;
@@ -159,6 +200,8 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
         }
 
         stones[StoneID].people.push({
+            first: FirstName,
+            last: LastName,
             name: (FirstName + " " + LastName).trim(),
             birth: BirthDate,
             death: DeathDate,
@@ -198,13 +241,15 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
                 </div>
             `;
 
-            if (index < stone.people.length - 1) {
-                popup += `<div class="divider"></div>`;
-            }
+            if (index < stone.people.length - 1) popup += `<div class="divider"></div>`;
+
+            markerIndex.push({
+                marker: marker,
+                personData: person
+            });
         });
 
         if (stone.photo) {
-
             const captionText = stone.people.map(p =>
                 `<strong>${p.name}</strong><br>
                  ${p.birth ? p.birth + " – " : ""}
@@ -222,38 +267,63 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
         }
 
         popup += `</div>`;
-
         marker.bindPopup(popup);
-
-        stone.people.forEach(person => {
-            markerIndex.push({
-                name: person.name.toLowerCase(),
-                marker: marker
-            });
-        });
-
     });
 
-    document.getElementById("searchBox").addEventListener("keyup", function(e) {
+    document.getElementById("searchBtn").addEventListener("click", function() {
 
-        const query = e.target.value.toLowerCase();
-
-        if (!query) {
-            allMarkers.forEach(m => map.addLayer(m));
-            return;
-        }
+        const first = document.getElementById("firstNameSearch").value.toLowerCase();
+        const last = document.getElementById("lastNameSearch").value.toLowerCase();
+        const birth = document.getElementById("birthSearch").value;
+        const death = document.getElementById("deathSearch").value;
 
         allMarkers.forEach(m => map.removeLayer(m));
 
-        const result = markerIndex.find(entry =>
-            entry.name.includes(query)
-        );
+        let matches = [];
 
-        if (result) {
-            map.addLayer(result.marker);
-            map.setView(result.marker.getLatLng(), 19);
-            result.marker.openPopup();
+        markerIndex.forEach(entry => {
+
+            const p = entry.personData;
+            let match = true;
+
+            if (first && !p.first.toLowerCase().includes(first)) match = false;
+            if (last && !p.last.toLowerCase().includes(last)) match = false;
+            if (birth && !p.birth.includes(birth)) match = false;
+            if (death && !p.death.includes(death)) match = false;
+
+            if (match) matches.push(entry.marker);
+        });
+
+        matches = [...new Set(matches)];
+
+        if (matches.length === 0) {
+            document.getElementById("noResults").style.display = "block";
+            return;
         }
+
+        document.getElementById("noResults").style.display = "none";
+
+        matches.forEach(m => map.addLayer(m));
+
+        if (matches.length === 1) {
+            map.setView(matches[0].getLatLng(), 19);
+            matches[0].openPopup();
+        } else {
+            const group = new L.featureGroup(matches);
+            map.fitBounds(group.getBounds().pad(0.5));
+        }
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", function() {
+
+        document.getElementById("firstNameSearch").value = "";
+        document.getElementById("lastNameSearch").value = "";
+        document.getElementById("birthSearch").value = "";
+        document.getElementById("deathSearch").value = "";
+
+        document.getElementById("noResults").style.display = "none";
+
+        allMarkers.forEach(m => map.addLayer(m));
     });
 
   });
