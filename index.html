@@ -8,113 +8,63 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
     <style>
-        body { margin: 0; font-family: Georgia, serif; background: #111; }
-        #map { height: 100vh; width: 100%; }
+        body { margin:0; font-family: Georgia, serif; background:#111; }
+        #map { height:100vh; width:100%; }
 
-        /* COLLAPSIBLE SEARCH */
         #searchContainer {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            width: 95%;
-            max-width: 700px;
+            position:absolute;
+            top:10px;
+            left:50%;
+            transform:translateX(-50%);
+            z-index:1000;
+            width:95%;
+            max-width:700px;
         }
 
         #searchToggle {
-            background: rgba(20,20,20,0.95);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            text-align: center;
-            font-size: 16px;
+            background:rgba(20,20,20,0.95);
+            color:white;
+            padding:8px;
+            border-radius:6px;
+            cursor:pointer;
+            text-align:center;
         }
 
         #searchPanel {
-            background: rgba(20,20,20,0.95);
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 5px;
-            display: none;
-            flex-wrap: wrap;
-            gap: 6px;
+            display:none;
+            background:rgba(20,20,20,0.95);
+            padding:10px;
+            margin-top:5px;
+            border-radius:6px;
+            flex-wrap:wrap;
+            gap:6px;
         }
 
         #searchPanel input {
-            padding: 6px;
-            font-size: 14px;
-            border-radius: 4px;
-            border: none;
-            width: 120px;
+            padding:6px;
+            border:none;
+            border-radius:4px;
+            width:120px;
         }
 
         #searchPanel button {
-            padding: 6px 10px;
-            font-size: 14px;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
+            padding:6px 10px;
+            border:none;
+            border-radius:4px;
+            cursor:pointer;
         }
 
         #noResults {
-            position: absolute;
-            top: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(120,0,0,0.95);
-            color: white;
-            padding: 8px 14px;
-            border-radius: 4px;
-            display: none;
-            z-index: 1000;
-        }
-
-        .archive-popup { font-size: 15px; line-height: 1.4; }
-        .person-card { margin-bottom: 10px; }
-        .divider { border-top: 1px solid #ccc; margin: 8px 0; }
-        .stone-photo { width: 100%; margin-top: 8px; border-radius: 4px; cursor: pointer; }
-
-        /* FULLSCREEN OVERLAY */
-        #photoOverlay {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.92);
-            justify-content: center;
-            align-items: center;
-        }
-
-        #photoContent {
-            position: relative;
-            max-width: 95%;
-            max-height: 95%;
-            text-align: center;
-            color: white;
-        }
-
-        #overlayImage {
-            max-width: 100%;
-            max-height: 80vh;
-            border-radius: 6px;
-        }
-
-        #overlayCaption {
-            margin-top: 12px;
-            font-size: 18px;
-        }
-
-        #closeOverlay {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            font-size: 32px;
-            cursor: pointer;
+            position:absolute;
+            top:120px;
+            left:50%;
+            transform:translateX(-50%);
+            background:rgba(120,0,0,0.95);
+            color:white;
+            padding:8px 14px;
+            border-radius:4px;
+            display:none;
+            z-index:1000;
         }
     </style>
 </head>
@@ -136,26 +86,17 @@
 
 <div id="map"></div>
 
-<div id="photoOverlay">
-  <div id="photoContent">
-    <span id="closeOverlay">&times;</span>
-    <img id="overlayImage" src="">
-    <div id="overlayCaption"></div>
-  </div>
-</div>
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-const map = L.map('map', {
-    maxZoom: 19,
-    minZoom: 16
-}).setView([39.736500, -93.636222], 18);
+/* MAP INIT */
+const map = L.map('map', { maxZoom:19, minZoom:16 })
+.setView([39.736500, -93.636222], 18);
 
 L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { attribution: 'Tiles © Esri', maxZoom: 19 }
+'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+{ attribution:'Tiles © Esri', maxZoom:19 }
 ).addTo(map);
 
 let markerIndex = [];
@@ -175,7 +116,7 @@ toggle.onclick = function() {
     }
 };
 
-/* LIVE SEARCH FUNCTION */
+/* SEARCH FUNCTION */
 function runSearch() {
 
     const first = document.getElementById("firstNameSearch").value.toLowerCase();
@@ -202,7 +143,7 @@ function runSearch() {
 
     matches = [...new Set(matches)];
 
-    if (matches.length === 0 && (first || last || birth || death)) {
+    if ((first || last || birth || death) && matches.length === 0) {
         document.getElementById("noResults").style.display = "block";
         return;
     }
@@ -220,7 +161,7 @@ function runSearch() {
     }
 }
 
-/* LIVE FILTERING */
+/* LIVE FILTER */
 ["firstNameSearch","lastNameSearch","birthSearch","deathSearch"]
 .forEach(id => {
     document.getElementById(id).addEventListener("input", runSearch);
@@ -235,7 +176,8 @@ document.getElementById("clearBtn").onclick = function() {
     allMarkers.forEach(m => map.addLayer(m));
 };
 
-fetch('fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2pk76rkVZ78f8woDAo2pHGo0bzZcgoPyQHQc2mo72_hTxDHihkW3KoS/pub?output=csv')
+/* LOAD GOOGLE SHEET */
+fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2pk76rkVZ78f8woDAo2pHGo0bzZcgoPyQHQc2mo72_hTxDHihkW3KoS/pub?output=csv')
 .then(res => res.text())
 .then(csv => {
 
@@ -246,8 +188,8 @@ fetch('fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdz
     const stones = {};
 
     for (let i=1; i<lines.length; i++) {
-        if (!lines[i].trim()) continue;
 
+        if (!lines[i].trim()) continue;
         const cols = lines[i].split(',');
 
         const id = cols[getIndex("StoneID")];
@@ -257,24 +199,21 @@ fetch('fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdz
         const last = cols[getIndex("LastName")] || "";
         const birth = cols[getIndex("BirthDate")] || "";
         const death = cols[getIndex("DeathDate")] || "";
-        const photo = cols[getIndex("PhotoFileName")] || "";
 
         if (!id || isNaN(lat) || isNaN(lng)) continue;
 
-        if (!stones[id]) stones[id] = {lat,lng,people:[],photo};
+        if (!stones[id]) stones[id] = {lat,lng,people:[]};
 
-        stones[id].people.push({
-            first,last,
-            name:(first+" "+last).trim(),
-            birth,death
-        });
+        stones[id].people.push({first,last,birth,death});
     }
 
     Object.values(stones).forEach(stone => {
 
         const marker = L.circleMarker([stone.lat, stone.lng], {
-            radius:4, fillColor:"#fff",
-            color:"#000", weight:1,
+            radius:4,
+            fillColor:"#fff",
+            color:"#000",
+            weight:1,
             fillOpacity:0.95
         }).addTo(map);
 
@@ -285,6 +224,9 @@ fetch('fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdz
         });
     });
 
+})
+.catch(err => {
+    console.error("CSV Load Error:", err);
 });
 
 </script>
