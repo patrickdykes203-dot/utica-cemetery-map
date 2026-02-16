@@ -11,19 +11,35 @@
         body { margin: 0; font-family: Georgia, serif; background: #111; }
         #map { height: 100vh; width: 100%; }
 
-        /* SEARCH PANEL */
-        #searchPanel {
+        /* COLLAPSIBLE SEARCH */
+        #searchContainer {
             position: absolute;
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
+            width: 95%;
+            max-width: 700px;
+        }
+
+        #searchToggle {
+            background: rgba(20,20,20,0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        #searchPanel {
             background: rgba(20,20,20,0.95);
             padding: 10px;
             border-radius: 6px;
-            display: flex;
-            gap: 6px;
+            margin-top: 5px;
+            display: none;
             flex-wrap: wrap;
+            gap: 6px;
         }
 
         #searchPanel input {
@@ -44,7 +60,7 @@
 
         #noResults {
             position: absolute;
-            top: 80px;
+            top: 120px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(120,0,0,0.95);
@@ -104,13 +120,16 @@
 </head>
 <body>
 
-<div id="searchPanel">
-    <input type="text" id="firstNameSearch" placeholder="First Name">
-    <input type="text" id="lastNameSearch" placeholder="Last Name">
-    <input type="text" id="birthSearch" placeholder="Birth Year">
-    <input type="text" id="deathSearch" placeholder="Death Year">
-    <button id="searchBtn">Search</button>
-    <button id="clearBtn">Clear</button>
+<div id="searchContainer">
+    <div id="searchToggle">Search ▾</div>
+
+    <div id="searchPanel">
+        <input type="text" id="firstNameSearch" placeholder="First Name">
+        <input type="text" id="lastNameSearch" placeholder="Last Name">
+        <input type="text" id="birthSearch" placeholder="Birth Year">
+        <input type="text" id="deathSearch" placeholder="Death Year">
+        <button id="clearBtn">Clear</button>
+    </div>
 </div>
 
 <div id="noResults">No results found</div>
@@ -142,193 +161,132 @@ L.tileLayer(
 let markerIndex = [];
 let allMarkers = [];
 
-/* FULLSCREEN IMAGE */
-function openPhoto(src, captionText) {
-    document.getElementById("overlayImage").src = src;
-    document.getElementById("overlayCaption").innerHTML = captionText;
-    document.getElementById("photoOverlay").style.display = "flex";
-}
+/* COLLAPSE TOGGLE */
+const toggle = document.getElementById("searchToggle");
+const panel = document.getElementById("searchPanel");
 
-document.getElementById("closeOverlay").onclick = function() {
-    document.getElementById("photoOverlay").style.display = "none";
-};
-
-document.getElementById("photoOverlay").onclick = function(e) {
-    if (e.target.id === "photoOverlay") {
-        document.getElementById("photoOverlay").style.display = "none";
+toggle.onclick = function() {
+    if (panel.style.display === "none") {
+        panel.style.display = "flex";
+        toggle.innerText = "Search ▴";
+    } else {
+        panel.style.display = "none";
+        toggle.innerText = "Search ▾";
     }
 };
 
-fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2pk76rkVZ78f8woDAo2pHGo0bzZcgoPyQHQc2mo72_hTxDHihkW3KoS/pub?output=csv')
-  .then(response => response.text())
-  .then(csvText => {
+/* LIVE SEARCH FUNCTION */
+function runSearch() {
 
-    const lines = csvText.trim().split('\n');
+    const first = document.getElementById("firstNameSearch").value.toLowerCase();
+    const last = document.getElementById("lastNameSearch").value.toLowerCase();
+    const birth = document.getElementById("birthSearch").value;
+    const death = document.getElementById("deathSearch").value;
+
+    allMarkers.forEach(m => map.removeLayer(m));
+
+    let matches = [];
+
+    markerIndex.forEach(entry => {
+
+        const p = entry.personData;
+        let match = true;
+
+        if (first && !p.first.toLowerCase().includes(first)) match = false;
+        if (last && !p.last.toLowerCase().includes(last)) match = false;
+        if (birth && !p.birth.includes(birth)) match = false;
+        if (death && !p.death.includes(death)) match = false;
+
+        if (match) matches.push(entry.marker);
+    });
+
+    matches = [...new Set(matches)];
+
+    if (matches.length === 0 && (first || last || birth || death)) {
+        document.getElementById("noResults").style.display = "block";
+        return;
+    }
+
+    document.getElementById("noResults").style.display = "none";
+
+    matches.forEach(m => map.addLayer(m));
+
+    if (matches.length === 1) {
+        map.setView(matches[0].getLatLng(), 19);
+        matches[0].openPopup();
+    } else if (matches.length > 1) {
+        const group = new L.featureGroup(matches);
+        map.fitBounds(group.getBounds().pad(0.5));
+    }
+}
+
+/* LIVE FILTERING */
+["firstNameSearch","lastNameSearch","birthSearch","deathSearch"]
+.forEach(id => {
+    document.getElementById(id).addEventListener("input", runSearch);
+});
+
+/* CLEAR */
+document.getElementById("clearBtn").onclick = function() {
+    ["firstNameSearch","lastNameSearch","birthSearch","deathSearch"]
+    .forEach(id => document.getElementById(id).value = "");
+
+    document.getElementById("noResults").style.display = "none";
+    allMarkers.forEach(m => map.addLayer(m));
+};
+
+fetch('YOUR GOOGLE SHEET CSV URL HERE')
+.then(res => res.text())
+.then(csv => {
+
+    const lines = csv.trim().split('\n');
     const headers = lines[0].split(',');
-    const getIndex = (name) => headers.indexOf(name);
+    const getIndex = name => headers.indexOf(name);
 
     const stones = {};
 
-    for (let i = 1; i < lines.length; i++) {
-
+    for (let i=1; i<lines.length; i++) {
         if (!lines[i].trim()) continue;
 
         const cols = lines[i].split(',');
 
-        const StoneID = cols[getIndex("StoneID")];
-        const Latitude = parseFloat(cols[getIndex("Latitude")]);
-        const Longitude = parseFloat(cols[getIndex("Longitude")]);
-        const LastName = cols[getIndex("LastName")] || "";
-        const FirstName = cols[getIndex("FirstName")] || "";
-        const BirthDate = cols[getIndex("BirthDate")] || "";
-        const DeathDate = cols[getIndex("DeathDate")] || "";
-        const AgeText = cols[getIndex("AgeText")] || "";
-        const Inscription = cols[getIndex("Inscription")] || "";
-        const Notes = cols[getIndex("Notes")] || "";
-        const PhotoFileName = cols[getIndex("PhotoFileName")] || "";
-        const FindAGraveURL = cols[getIndex("FindAGraveURL")] || "";
+        const id = cols[getIndex("StoneID")];
+        const lat = parseFloat(cols[getIndex("Latitude")]);
+        const lng = parseFloat(cols[getIndex("Longitude")]);
+        const first = cols[getIndex("FirstName")] || "";
+        const last = cols[getIndex("LastName")] || "";
+        const birth = cols[getIndex("BirthDate")] || "";
+        const death = cols[getIndex("DeathDate")] || "";
+        const photo = cols[getIndex("PhotoFileName")] || "";
 
-        if (!StoneID || isNaN(Latitude) || isNaN(Longitude)) continue;
+        if (!id || isNaN(lat) || isNaN(lng)) continue;
 
-        if (!stones[StoneID]) {
-            stones[StoneID] = {
-                lat: Latitude,
-                lng: Longitude,
-                people: [],
-                photo: PhotoFileName
-            };
-        }
+        if (!stones[id]) stones[id] = {lat,lng,people:[],photo};
 
-        stones[StoneID].people.push({
-            first: FirstName,
-            last: LastName,
-            name: (FirstName + " " + LastName).trim(),
-            birth: BirthDate,
-            death: DeathDate,
-            age: AgeText,
-            inscription: Inscription,
-            notes: Notes,
-            findagrave: FindAGraveURL
+        stones[id].people.push({
+            first,last,
+            name:(first+" "+last).trim(),
+            birth,death
         });
     }
 
     Object.values(stones).forEach(stone => {
 
         const marker = L.circleMarker([stone.lat, stone.lng], {
-            radius: 4,
-            fillColor: "#ffffff",
-            color: "#000000",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.95
+            radius:4, fillColor:"#fff",
+            color:"#000", weight:1,
+            fillOpacity:0.95
         }).addTo(map);
 
         allMarkers.push(marker);
 
-        let popup = `<div class="archive-popup">`;
-
-        stone.people.forEach((person, index) => {
-
-            popup += `
-                <div class="person-card">
-                    <strong>${person.name}</strong><br>
-                    ${person.birth ? "Born: " + person.birth + "<br>" : ""}
-                    ${person.death ? "Died: " + person.death + "<br>" : ""}
-                    ${person.age ? "Age: " + person.age + "<br>" : ""}
-                    ${person.inscription ? person.inscription + "<br>" : ""}
-                    ${person.notes ? person.notes + "<br>" : ""}
-                    ${person.findagrave ? `<a href="${person.findagrave}" target="_blank">Find A Grave</a>` : ""}
-                </div>
-            `;
-
-            if (index < stone.people.length - 1) popup += `<div class="divider"></div>`;
-
-            markerIndex.push({
-                marker: marker,
-                personData: person
-            });
+        stone.people.forEach(p=>{
+            markerIndex.push({marker, personData:p});
         });
-
-        if (stone.photo) {
-            const captionText = stone.people.map(p =>
-                `<strong>${p.name}</strong><br>
-                 ${p.birth ? p.birth + " – " : ""}
-                 ${p.death ? p.death : ""}`
-            ).join("<br><br>");
-
-            popup += `
-                <img src="photos/${stone.photo}" class="stone-photo"
-                onclick="openPhoto('photos/${stone.photo}', \`${captionText}\`)"
-                onerror="this.style.display='none'">
-                <div style="text-align:center; font-size:14px; margin-top:4px;">
-                    Tap image to enlarge
-                </div>
-            `;
-        }
-
-        popup += `</div>`;
-        marker.bindPopup(popup);
     });
 
-    document.getElementById("searchBtn").addEventListener("click", function() {
-
-        const first = document.getElementById("firstNameSearch").value.toLowerCase();
-        const last = document.getElementById("lastNameSearch").value.toLowerCase();
-        const birth = document.getElementById("birthSearch").value;
-        const death = document.getElementById("deathSearch").value;
-
-        allMarkers.forEach(m => map.removeLayer(m));
-
-        let matches = [];
-
-        markerIndex.forEach(entry => {
-
-            const p = entry.personData;
-            let match = true;
-
-            if (first && !p.first.toLowerCase().includes(first)) match = false;
-            if (last && !p.last.toLowerCase().includes(last)) match = false;
-            if (birth && !p.birth.includes(birth)) match = false;
-            if (death && !p.death.includes(death)) match = false;
-
-            if (match) matches.push(entry.marker);
-        });
-
-        matches = [...new Set(matches)];
-
-        if (matches.length === 0) {
-            document.getElementById("noResults").style.display = "block";
-            return;
-        }
-
-        document.getElementById("noResults").style.display = "none";
-
-        matches.forEach(m => map.addLayer(m));
-
-        if (matches.length === 1) {
-            map.setView(matches[0].getLatLng(), 19);
-            matches[0].openPopup();
-        } else {
-            const group = new L.featureGroup(matches);
-            map.fitBounds(group.getBounds().pad(0.5));
-        }
-    });
-
-    document.getElementById("clearBtn").addEventListener("click", function() {
-
-        document.getElementById("firstNameSearch").value = "";
-        document.getElementById("lastNameSearch").value = "";
-        document.getElementById("birthSearch").value = "";
-        document.getElementById("deathSearch").value = "";
-
-        document.getElementById("noResults").style.display = "none";
-
-        allMarkers.forEach(m => map.addLayer(m));
-    });
-
-  });
+});
 
 </script>
-
 </body>
 </html>
