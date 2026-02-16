@@ -199,12 +199,24 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
         const last = cols[getIndex("LastName")] || "";
         const birth = cols[getIndex("BirthDate")] || "";
         const death = cols[getIndex("DeathDate")] || "";
+        const age = cols[getIndex("AgeText")] || "";
+        const inscription = cols[getIndex("Inscription")] || "";
+        const notes = cols[getIndex("Notes")] || "";
+        const findagrave = cols[getIndex("FindAGraveURL")] || "";
 
         if (!id || isNaN(lat) || isNaN(lng)) continue;
 
-        if (!stones[id]) stones[id] = {lat,lng,people:[]};
+        if (!stones[id]) {
+            stones[id] = { lat, lng, people: [] };
+        }
 
-        stones[id].people.push({first,last,birth,death});
+        stones[id].people.push({
+            first, last,
+            name: (first + " " + last).trim(),
+            birth, death, age,
+            inscription, notes,
+            findagrave
+        });
     }
 
     Object.values(stones).forEach(stone => {
@@ -219,9 +231,36 @@ fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS0fmOFHETJvNAEhdzwc_kaN2
 
         allMarkers.push(marker);
 
-        stone.people.forEach(p=>{
-            markerIndex.push({marker, personData:p});
+        let popup = `<div class="archive-popup">`;
+
+        stone.people.forEach((p, index) => {
+
+            popup += `
+                <div class="person-card">
+                    <strong>${p.name}</strong><br>
+                    ${p.birth ? "Born: " + p.birth + "<br>" : ""}
+                    ${p.death ? "Died: " + p.death + "<br>" : ""}
+                    ${p.age ? "Age: " + p.age + "<br>" : ""}
+                    ${p.inscription ? p.inscription + "<br>" : ""}
+                    ${p.notes ? p.notes + "<br>" : ""}
+                    ${p.findagrave ? `<a href="${p.findagrave}" target="_blank">Find A Grave</a>` : ""}
+                </div>
+            `;
+
+            if (index < stone.people.length - 1) {
+                popup += `<div style="border-top:1px solid #ccc; margin:8px 0;"></div>`;
+            }
+
+            markerIndex.push({
+                marker,
+                personData: p
+            });
         });
+
+        popup += `</div>`;
+
+        marker.bindPopup(popup);
+
     });
 
 })
